@@ -9,6 +9,7 @@ const { getAllTransactions, createTransaction, updateTransaction, createManyTran
 const { getInvestments, createInvestment, updateInvestment, deleteInvestment } = require('../controllers/investmentController');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const { getDashboard } = require('../controllers/dashboardController');
+const { createProfit, getProfit } = require('../controllers/profitController');
 
 const router = express.Router();
 
@@ -48,5 +49,8 @@ router.post('/add-transaction', roleMiddleware(['admin', 'superuser']), createTr
 router.post('/edit-transaction', roleMiddleware(['admin']), updateTransaction);
 router.post('/add-transactions', roleMiddleware(['admin']), createManyTransaction);
 router.post('/delete-transaction', roleMiddleware(['admin']), deleteTransaction);
+
+router.post('/profit', getProfit);
+router.post('/add-profit', roleMiddleware(['admin']), createProfit);
 
 module.exports = router;

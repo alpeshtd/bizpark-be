@@ -5,7 +5,7 @@ const TransactionSchema = new mongoose.Schema({
     entityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
     amount: { type: String, required: true },
     status: { type: String, enum: ['paid', 'due'], default: 'due' },
-    generatedOn: { type: String },
+    generatedOn: { type: String, required: true },
     startDate: { type: String },
     endDate: { type: String },
     paidOn: { type: String },
