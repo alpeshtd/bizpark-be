@@ -2,10 +2,6 @@ const mongoose = require('mongoose');
 
 const profitSchema = new mongoose.Schema({
     month: { type: String, required: true, unique: true},
-    profit: { type: String, required: true},
-    expense: { type: String, required: true},
-    projectedProfit: { type: String, required: true},
-    projectedExpense: { type: String, required: true},
     splits: [{
         splitDate: { type: String },
         splitAmount: { type: String },
@@ -16,7 +12,8 @@ const profitSchema = new mongoose.Schema({
             amount: {type: String},
         }]
     }],
-    currentSplitRem: { type: String },
+    startOfMonth: { type: String},
+    endOfMonth: { type: String},
 });
 
 module.exports = mongoose.model('Profit', profitSchema);

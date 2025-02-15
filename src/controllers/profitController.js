@@ -5,11 +5,28 @@ const Expense = require('../models/expenseModel');
 const createProfit = async (req, res) => {
     try {
         const { startOfMonth, endOfMonth, dateString } = req.body;
-        const isProfit = await Profit.find({ month: dateString});
-        if(isProfit?.length) {
-            res.status(400).json({ error: "already exists"});
+        const profit = new Profit({
+            month: dateString,
+            splits: [],
+            startOfMonth,
+            endOfMonth
+        });
+        await profit.save();
+        res.status(201).json(profit);
+    } catch (error) {
+        res.status(400).json({ error: error.message })
+    }
+}
+
+const refreshProfit = async (req, res) => {
+    try {
+        const { id } = req.body;
+        const profit = await Profit.find({ _id: id });
+        if (!profit?.length) {
+            res.status(400).json({ error: "Not exists" });
             return;
         }
+        const { startOfMonth, endOfMonth } = profit[0];
         const profitAmount = await Transaction.aggregate([
             { $match: { generatedOn: { $gte: startOfMonth, $lte: endOfMonth }, status: 'paid' } },
             {
@@ -61,30 +78,107 @@ const createProfit = async (req, res) => {
             }
         ]);
         const currentSplitRem = profitAmount?.[0]?.profit && expAmount?.[0]?.expense ? profitAmount[0].profit - expAmount[0].expense : 0;
-
-        const profit = new Profit({
-            month: dateString,
+        const updatedProfit = await Profit.updateOne({ _id: id }, {
             profit: `${profitAmount?.[0]?.profit || 0}`,
             expense: `${expAmount?.[0]?.expense || 0}`,
             projectedProfit: `${profitAmount?.[0]?.projectedProfit || 0}`,
             projectedExpense: `${expAmount?.[0]?.projectedExpense || 0}`,
-            splits: [],
-            currentSplitRem,
+            currentSplitRem
         });
-        await profit.save();
-        res.status(201).json(profit);
+        res.status(200).json(updatedProfit);
     } catch (error) {
-        res.status(400).json({error: error.message})
-    }
-}
-
-const getProfit = async (req, res) => {
-    try{
-        const profit = await Profit.find({});
-        res.status(200).json(profit);
-    } catch(error) {
         res.status(400).json({ error: error.message });
     }
 }
 
-module.exports = { createProfit, getProfit }
+const getProfit = async (req, res) => {
+    try {
+        // const profit = await Profit.find({});
+        // res.status(200).json(profit);
+
+        const profit = await Profit.find({});
+        if(!profit?.length) {
+            res.status(200).json(profit);
+            return;
+        }
+        // const profitAmount = [];
+        const finalData = []; 
+        for( const data of profit) {
+            const profitAmount = await Transaction.aggregate([
+                { $match: { generatedOn: { $gte: data.startOfMonth, $lte: data.endOfMonth }} },
+                {
+                    $addFields: {
+                        amountNumeric: { $toDouble: "$amount" }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null, // Grouping everything together
+                        profit: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: ["$status", "paid"] }, // Condition: status is "active"
+                                    "$amountNumeric", // Include the amount if condition is true
+                                    0, // Otherwise, add 0
+                                ],
+                            },
+                        },
+                        projectedProfit: {
+                            $sum: "$amountNumeric",
+                        },
+                    }
+                }
+            ]);
+
+            const expAmount = await Expense.aggregate([
+                { $match: { date: { $gte: data.startOfMonth, $lte: data.endOfMonth }} },
+                {
+                    $addFields: {
+                        amountNumeric: { $toDouble: "$amount" }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null, // Grouping everything together
+                        expense: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: ["$status", "paid"] }, // Condition: status is "active"
+                                    "$amountNumeric", // Include the amount if condition is true
+                                    0, // Otherwise, add 0
+                                ],
+                            },
+                        },
+                        projectedExpense: {
+                            $sum: "$amountNumeric",
+                        },
+                    }
+                }
+            ]);
+            const currentSplitRem = profitAmount?.[0]?.profit && expAmount?.[0]?.expense ? profitAmount[0].profit - expAmount[0].expense : 0;
+            finalData.push({
+                ...data._doc,
+                profit: `${profitAmount?.[0]?.profit || 0}`,
+                expense: `${expAmount?.[0]?.expense || 0}`,
+                projectedProfit: `${profitAmount?.[0]?.projectedProfit || 0}`,
+                projectedExpense: `${expAmount?.[0]?.projectedExpense || 0}`,
+                currentSplitRem
+            })
+        }
+        res.status(200).json(finalData);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+const deleteProfit = async (req, res) => {
+    try {
+        const { id } = req.body;
+        const result = await Profit.deleteOne({ _id: id });
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+module.exports = { createProfit, getProfit, refreshProfit, deleteProfit }
