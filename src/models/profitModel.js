@@ -8,6 +8,7 @@ const profitSchema = new mongoose.Schema({
         remarks: { type: String },
         investors: [{ 
             _id: {type: mongoose.Schema.Types.ObjectId, ref: 'Investor'},
+            name: {type: String},
             share: {type: String},
             amount: {type: String},
         }]
