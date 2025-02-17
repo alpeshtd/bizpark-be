@@ -46,7 +46,8 @@ const getSpaces = async (req, res) => {
                     path: "$tenant", // Unwind the owner array
                     preserveNullAndEmptyArrays: true // Include spaces without an owner
                 }
-            }
+            },
+            { $sort: { name: 1 } }
         ]);
         res.status(200).json(spaces);
     } catch (error) {

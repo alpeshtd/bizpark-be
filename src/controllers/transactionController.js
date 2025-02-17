@@ -85,11 +85,11 @@ const getAllTransactions = async (req, res) => {
         let totalPages;
         if (pagination?.page && pagination.limit) {
             const skip = (pagination.page - 1) * pagination.limit;
-            data = await Transaction.find(filters).populate('entityId', 'name').populate('space', 'name').skip(skip).limit(pagination.limit);
+            data = await Transaction.find(filters).sort({ generatedOn: -1 }).populate('entityId', 'name').populate('space', 'name').skip(skip).limit(pagination.limit);
             total = await Transaction.countDocuments(filters);
             totalPages = Math.ceil(total / limit);
         } else {
-            data = await Transaction.find(filters).populate('entityId', 'name').populate('space', 'name');
+            data = await Transaction.find(filters).sort({ generatedOn: -1 }).populate('entityId', 'name').populate('space', 'name');
             total = data.length;
             totalPages = 1;
         }
@@ -97,6 +97,7 @@ const getAllTransactions = async (req, res) => {
         const formattedFilters = stringIdToObjectId(filters, ['space', 'entityId']);
         const aggregate = await Transaction.aggregate([
             { $match: { ...formattedFilters } },
+            { $sort: { generatedOn: -1 }},
             {
                 $addFields: {
                     amountNumeric: { $toDouble: "$amount" } // Convert salary to a number

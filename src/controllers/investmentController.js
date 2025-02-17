@@ -33,11 +33,11 @@ const getInvestments = async (req, res) => {
         let totalPages;
         if (pagination?.page && pagination.limit) {
             const skip = (pagination.page - 1) * pagination.limit;
-            data = await Investment.find(filters).populate('investorId', 'name').skip(skip).limit(pagination.limit);
+            data = await Investment.find(filters).sort({ date: -1}).populate('investorId', 'name').skip(skip).limit(pagination.limit);
             total = await Investment.countDocuments(filters);
             totalPages = Math.ceil(total / limit);
         } else {
-            data = await Investment.find(filters).populate('investorId', 'name');
+            data = await Investment.find(filters).sort({ date: -1}).populate('investorId', 'name');
             total = data.length;
             totalPages = 1;
         }
@@ -45,6 +45,7 @@ const getInvestments = async (req, res) => {
         const formattedFilters = stringIdToObjectId(filters, ['investorId']);
         const aggregate = await Investment.aggregate([
             { $match: { ...formattedFilters } },
+            { $sort: { date: -1}},
             {
                 $addFields: {
                     amountNumeric: { $toDouble: "$amount" }

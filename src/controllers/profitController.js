@@ -44,7 +44,7 @@ const getProfit = async (req, res) => {
         // const profit = await Profit.find({});
         // res.status(200).json(profit);
 
-        const profit = await Profit.find({});
+        const profit = await Profit.find({}).sort({ startOfMonth: -1});
         if (!profit?.length) {
             res.status(200).json(profit);
             return;
