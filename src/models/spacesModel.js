@@ -4,7 +4,7 @@ const spaceSchema = new mongoose.Schema(
     {
         name: { type: String, required: true },
         status: { type: String, required: true },
-        // rent: { type: String },
+        category: { type: String, required: true },
         // deposit: { type: String },
         tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: false, default: null },
     }
