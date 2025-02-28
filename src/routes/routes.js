@@ -2,7 +2,7 @@ const express = require('express');
 
 const { getSpaces, createSpace, deleteSpace, updateSpace } = require('../controllers/spaceController');
 const { getTenants, createTenant, updateTenant, deleteTenant } = require('../controllers/tenantController');
-const { getInvestors, createInvestor, updateInvestor, deleteInvestor } = require('../controllers/investorController');
+const { getInvestors, createInvestor, updateInvestor, deleteInvestor, getInvestorProfit } = require('../controllers/investorController');
 const { getHotel, createHotel } = require('../controllers/hotelController');
 const { getAllExpenses, createExpense, updateExpense, deleteExpense } = require('../controllers/expenseController');
 const { getAllTransactions, createTransaction, updateTransaction, createManyTransaction, deleteTransaction } = require('../controllers/transactionController');
@@ -35,6 +35,7 @@ router.post('/investments', getInvestments);
 router.post('/add-investment', roleMiddleware(['admin', 'superuser']), createInvestment);
 router.post('/edit-investment', roleMiddleware(['admin']), updateInvestment);
 router.post('/delete-investment', roleMiddleware(['admin']), deleteInvestment);
+router.post('/get-investor-profit', getInvestorProfit);
 
 router.post('/hotel', getHotel);
 router.post('/add-hotel', roleMiddleware(['admin']), createHotel);

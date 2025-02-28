@@ -20,7 +20,7 @@ const createProfit = async (req, res) => {
 
 const editProfit = async (req, res) => {
     try {
-        const { id, splitDate, splitAmount, investors } = req.body;
+        const { id, splitDate, splitType, splitAmount, investors } = req.body;
         const profit = await Profit.find({ _id: id });
         if (!profit?.length) {
             res.status(400).json({ error: "Not exists" });
@@ -29,7 +29,7 @@ const editProfit = async (req, res) => {
 
         const updatedProfit = await Profit.findByIdAndUpdate(
             id,
-            { $push: { splits: { splitDate, splitAmount, investors } }, },
+            { $push: { splits: { splitDate, splitType, splitAmount, investors } }, },
             { new: true }
         );
 
@@ -44,7 +44,7 @@ const getProfit = async (req, res) => {
         // const profit = await Profit.find({});
         // res.status(200).json(profit);
 
-        const profit = await Profit.find({}).sort({ startOfMonth: -1});
+        const profit = await Profit.find({}).sort({ startOfMonth: -1 });
         if (!profit?.length) {
             res.status(200).json(profit);
             return;
@@ -57,6 +57,22 @@ const getProfit = async (req, res) => {
                 {
                     $addFields: {
                         amountNumeric: { $toDouble: "$amount" }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'spaces',
+                        as: 'hotelSell',
+                        localField: 'space',
+                        foreignField: '_id'
+                    }
+                },
+                { $unwind: { path: "$hotelSell", preserveNullAndEmptyArrays: true } },
+                {
+                    $addFields: {
+                        hotellSellPaid: {
+                            $cond: { if: { $eq: ["$status", "paid"] }, then: '$amountNumeric', else: 0 }
+                        }
                     }
                 },
                 {
@@ -74,8 +90,17 @@ const getProfit = async (req, res) => {
                         projectedProfit: {
                             $sum: "$amountNumeric",
                         },
+                        hotelSell: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: ["$hotelSell.category", "hotel"] }, // Condition: status is "active"
+                                    "$hotellSellPaid", // Include the amount if condition is true
+                                    0, // Otherwise, add 0
+                                ],
+                            },
+                        }
                     }
-                }
+                },
             ]);
 
             const expAmount = await Expense.aggregate([
@@ -83,6 +108,22 @@ const getProfit = async (req, res) => {
                 {
                     $addFields: {
                         amountNumeric: { $toDouble: "$amount" }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'spaces',
+                        as: 'hotelExpense',
+                        localField: 'entityId',
+                        foreignField: '_id'
+                    }
+                },
+                { $unwind: { path: "$hotelExpense", preserveNullAndEmptyArrays: true } },
+                {
+                    $addFields: {
+                        hotellExpensePaid: {
+                            $cond: { if: { $eq: ["$status", "paid"] }, then: '$amountNumeric', else: 0 }
+                        }
                     }
                 },
                 {
@@ -100,13 +141,22 @@ const getProfit = async (req, res) => {
                         projectedExpense: {
                             $sum: "$amountNumeric",
                         },
+                        hotelExpense: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: ["$hotelExpense.category", "hotel"] }, // Condition: status is "active"
+                                    "$hotellExpensePaid", // Include the amount if condition is true
+                                    0, // Otherwise, add 0
+                                ],
+                            },
+                        }
                     }
                 }
             ]);
             const alreadySplitted = data._doc.splits?.reduce((prev, data) => {
                 return +prev + +data.splitAmount
             }, 0);
-            
+
             const currentSplitRem = +(profitAmount?.[0]?.profit && expAmount?.[0]?.expense ? profitAmount[0].profit - expAmount[0].expense : 0) - alreadySplitted;
             finalData.push({
                 ...data._doc,
@@ -114,7 +164,9 @@ const getProfit = async (req, res) => {
                 expense: `${expAmount?.[0]?.expense || 0}`,
                 projectedProfit: `${profitAmount?.[0]?.projectedProfit || 0}`,
                 projectedExpense: `${expAmount?.[0]?.projectedExpense || 0}`,
-                currentSplitRem
+                currentSplitRem,
+                hotelSell: `${profitAmount?.[0]?.hotelSell || 0}`,
+                hotelExpense: `${expAmount?.[0]?.hotelExpense || 0}`,
             })
         }
         res.status(200).json(finalData);

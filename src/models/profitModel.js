@@ -4,6 +4,7 @@ const profitSchema = new mongoose.Schema({
     month: { type: String, required: true, unique: true},
     splits: [{
         splitDate: { type: String },
+        splitType: { type: String },
         splitAmount: { type: String },
         remarks: { type: String },
         investors: [{ 
